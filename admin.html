@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin Dashboard</title>
+
+<style>
+body{
+margin:0;
+font-family:Arial;
+background:#0f172a;
+color:white;
+}
+
+.container{
+display:flex;
+height:100vh;
+}
+
+.sidebar{
+width:200px;
+background:#111827;
+padding:20px;
+}
+
+.sidebar h3{
+margin-bottom:20px;
+}
+
+.sidebar button{
+width:100%;
+padding:10px;
+border:none;
+background:red;
+color:white;
+cursor:pointer;
+border-radius:5px;
+margin-bottom:10px;
+}
+
+.content{
+flex:1;
+padding:20px;
+overflow-y:auto;
+}
+
+input{
+width:200px;
+padding:8px;
+margin:5px;
+border-radius:5px;
+border:none;
+}
+
+button{
+padding:8px 12px;
+margin:5px;
+background:#38bdf8;
+border:none;
+color:white;
+border-radius:5px;
+cursor:pointer;
+}
+
+.card{
+background:#1e293b;
+padding:10px;
+margin-top:10px;
+border-radius:5px;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+
+<h3>Admin Panel</h3>
+
+<button onclick="window.location.href='view-user-messages.html'">
+View User Messages
+</button>
+
+<button onclick="logout()">Logout</button>
+
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="content">
+
+<h3>Add User</h3>
+
+<input id="newUser" placeholder="Username">
+<input id="newMobile" placeholder="Mobile">
+<button onclick="addUser()">Add</button>
+
+<h3>Edit User</h3>
+
+<input type="hidden" id="editId">
+<input id="editUsername" placeholder="Username">
+<input id="editMobile" placeholder="Mobile">
+<button onclick="updateUser()">Update</button>
+
+<h3>Send Message</h3>
+
+<input id="msgUser" placeholder="Username">
+<input id="msgText" placeholder="Message">
+<input type="file" id="msgImage">
+<input id="imageUrl" placeholder="Image URL (optional)">
+
+<button onclick="sendMessage()">Send</button>
+
+<h3>All Users</h3>
+
+<div id="users"></div>
+
+</div>
+</div>
+
+<script>
+
+const API="http://localhost:3000";
+
+/* ---------------- ADMIN SESSION CHECK ---------------- */
+
+let admin = JSON.parse(localStorage.getItem("admin"));
+
+if(!admin){
+alert("Admin login required");
+window.location.href="admin-user-login.html";
+}
+
+/* ---------------- LOAD USERS ---------------- */
+
+async function loadUsers(){
+
+try{
+
+let res = await fetch(API+"/users");
+let data = await res.json();
+
+let box=document.getElementById("users");
+box.innerHTML="";
+
+data.forEach(user=>{
+
+box.innerHTML+=`
+<div class="card">
+
+<b>${user.username}</b><br>
+${user.mobile}<br>
+Role: ${user.role || "user"}<br><br>
+
+<button onclick="makeAdmin('${user._id}')">Make Admin</button>
+<button onclick="makeUser('${user._id}')">Make User</button>
+
+<button onclick="editUser('${user._id}','${user.username}','${user.mobile}')">Edit</button>
+<button onclick="deleteUser('${user._id}')">Delete</button>
+
+</div>
+`;
+
+});
+
+}catch(err){
+console.log(err);
+}
+
+}
+
+/* ---------------- MAKE ADMIN ---------------- */
+
+async function makeAdmin(id){
+
+await fetch(API+"/make-admin/"+id,{
+method:"PUT"
+});
+
+alert("User promoted to admin");
+
+loadUsers();
+
+}
+/* ---------------- MAKE USER ---------------- */
+
+async function makeUser(id){
+
+await fetch(API+"/make-user/"+id,{
+method:"PUT"
+});
+
+alert("Admin changed to user");
+
+loadUsers();
+
+}
+
+/* ---------------- ADD USER ---------------- */
+
+async function addUser(){
+
+let username=document.getElementById("newUser").value.trim();
+let mobile=document.getElementById("newMobile").value.trim();
+
+if(!username || !mobile){
+alert("Fill all fields");
+return;
+}
+
+await fetch(API+"/addUser",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+username,
+mobile
+})
+
+});
+
+document.getElementById("newUser").value="";
+document.getElementById("newMobile").value="";
+
+alert("User Added");
+
+loadUsers();
+
+}
+
+/* ---------------- DELETE USER ---------------- */
+
+async function deleteUser(id){
+
+if(!confirm("Delete this user?")) return;
+
+await fetch(API+"/users/"+id,{
+method:"DELETE"
+});
+
+loadUsers();
+
+}
+
+/* ---------------- EDIT USER ---------------- */
+
+function editUser(id,username,mobile){
+
+document.getElementById("editId").value=id;
+document.getElementById("editUsername").value=username;
+document.getElementById("editMobile").value=mobile;
+
+}
+
+/* ---------------- UPDATE USER ---------------- */
+
+async function updateUser(){
+
+let id=document.getElementById("editId").value;
+let username=document.getElementById("editUsername").value.trim();
+let mobile=document.getElementById("editMobile").value.trim();
+
+if(!id){
+alert("Select user first");
+return;
+}
+
+await fetch(API+"/users/"+id,{
+
+method:"PUT",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+username,
+mobile
+})
+
+});
+
+alert("User Updated");
+
+loadUsers();
+
+}
+
+/* ---------------- SEND MESSAGE ---------------- */
+
+async function sendMessage(){
+
+let username=document.getElementById("msgUser").value.trim();
+let message=document.getElementById("msgText").value.trim();
+let image=document.getElementById("msgImage").files[0];
+let imageUrl=document.getElementById("imageUrl").value.trim();
+
+if(!username || !message){
+alert("Enter username and message");
+return;
+}
+
+let formData=new FormData();
+
+formData.append("username",username);
+formData.append("message",message);
+
+if(image){
+formData.append("image",image);
+}
+
+if(imageUrl){
+formData.append("imageUrl",imageUrl);
+}
+
+await fetch(API+"/addMessage",{
+method:"POST",
+body:formData
+});
+
+alert("Message Sent");
+
+document.getElementById("msgUser").value="";
+document.getElementById("msgText").value="";
+document.getElementById("msgImage").value="";
+document.getElementById("imageUrl").value="";
+
+}
+
+/* ---------------- LOGOUT ---------------- */
+
+function logout(){
+
+localStorage.removeItem("admin");
+
+window.location.href="admin-user-login.html";
+
+}
+
+/* ---------------- INIT ---------------- */
+
+loadUsers();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Login Page</title>
+
+<style>
+body{
+margin:0;
+font-family:Arial;
+background:#0f172a;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+height:100vh;
+color:white;
+}
+.box{
+background:#1e293b;
+padding:25px;
+border-radius:10px;
+width:300px;
+box-shadow:0 0 10px rgba(0,0,0,0.5);
+}
+
+h3{
+text-align:center;
+margin-bottom:15px;
+}
+
+select,input{
+width:100%;
+padding:10px;
+margin:8px 0;
+border:none;
+border-radius:5px;
+outline:none;
+}
+
+button{
+width:100%;
+padding:10px;
+margin-top:10px;
+background:#38bdf8;
+border:none;
+color:white;
+border-radius:5px;
+cursor:pointer;
+}
+
+button:hover{
+background:#0ea5e9;
+}
+
+.hidden{
+display:none;
+}
+</style>
+</head>
+
+<body>
+<h1 style="color:#38bdf8; margin-bottom:20px;">
+Office Team Management Portal
+</h1>
+
+<div class="box">
+
+<h3>Login</h3>
+
+<select id="role" onchange="toggleFields()">
+<option value="">Select Role</option>
+<option value="user">Team Member</option>
+<option value="admin">Admin</option>
+</select>
+
+<!-- USER LOGIN -->
+<div id="userFields" class="hidden">
+<input id="username" placeholder="Username">
+<input id="mobile" placeholder="Mobile Number">
+</div>
+
+<!-- ADMIN LOGIN -->
+<div id="adminFields" class="hidden">
+<input id="adminUser" placeholder="Admin Username">
+<input id="adminPass" type="password" placeholder="Admin Password">
+</div>
+
+<button onclick="login()">Login</button>
+
+</div>
+
+<script>
+
+const API="http://localhost:3000";
+
+/* ---------------- TOGGLE LOGIN FIELDS ---------------- */
+
+function toggleFields(){
+
+let role=document.getElementById("role").value;
+
+document.getElementById("userFields").style.display="none";
+document.getElementById("adminFields").style.display="none";
+
+if(role==="user"){
+document.getElementById("userFields").style.display="block";
+}
+
+if(role==="admin"){
+document.getElementById("adminFields").style.display="block";
+}
+
+}
+
+/* ---------------- LOGIN FUNCTION ---------------- */
+
+async function login(){
+
+let role=document.getElementById("role").value;
+
+if(!role){
+alert("Please select role");
+return;
+}
+
+let username;
+let mobile;
+
+/* ---------------- ADMIN LOGIN ---------------- */
+
+if(role==="admin"){
+
+username=document.getElementById("adminUser").value.trim();
+mobile=document.getElementById("adminPass").value.trim();
+
+}
+
+/* ---------------- USER LOGIN ---------------- */
+
+if(role==="user"){
+
+username=document.getElementById("username").value.trim();
+mobile=document.getElementById("mobile").value.trim();
+
+}
+
+if(!username || !mobile){
+alert("Enter login details");
+return;
+}
+
+try{
+
+let res=await fetch(API+"/login",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+username,
+mobile
+})
+
+});
+
+let data=await res.json();
+
+console.log("LOGIN RESPONSE:",data);
+
+/* ---------------- ADMIN SUCCESS ---------------- */
+
+if(data.status==="admin_ok"){
+
+localStorage.setItem("admin",JSON.stringify(data.user));
+
+alert("Admin Login Success");
+
+window.location.href="admin.html";
+
+return;
+
+}
+
+/* ---------------- USER SUCCESS ---------------- */
+
+if(data.status==="user_ok"){
+
+localStorage.setItem("user",JSON.stringify(data.user));
+
+alert("Login Success");
+
+window.location.href="user.html";
+
+return;
+
+}
+
+/* ---------------- FAIL ---------------- */
+
+alert("Invalid credentials");
+
+}catch(err){
+
+console.log(err);
+alert("Server error");
+
+}
+
+}
+
+</script>
+
+</body>
+</html>

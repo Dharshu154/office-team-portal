@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>User Messages</title>
+
+<style>
+body{
+margin:0;
+font-family:Arial;
+background:#0f172a;
+color:white;
+}
+
+.container{
+padding:20px;
+}
+
+select,button{
+padding:10px;
+margin:5px;
+border-radius:5px;
+border:none;
+}
+
+button{
+background:#38bdf8;
+color:white;
+cursor:pointer;
+}
+
+.back-btn{
+background:#ef4444;
+}
+
+.card{
+background:#1e293b;
+padding:10px;
+margin-top:10px;
+border-radius:6px;
+}
+
+.badge{
+color:red;
+font-weight:bold;
+}
+
+small{
+color:#94a3b8;
+}
+
+img{
+max-width:200px;
+border-radius:6px;
+margin-top:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>View User Messages</h2>
+
+<button class="back-btn" onclick="goBack()">⬅ Back to Admin</button>
+
+<br>
+
+<select id="userSelect"></select>
+<button onclick="loadMessages()">View Messages</button>
+
+<div id="messages"></div>
+
+</div>
+
+<script>
+
+const API = "http://localhost:3000";
+
+/* ---------------- BACK BUTTON ---------------- */
+
+function goBack(){
+window.location.href = "admin.html";
+}
+
+/* ---------------- LOAD USERS ---------------- */
+
+async function loadUsers(){
+
+try{
+
+let res = await fetch(API + "/users");
+let data = await res.json();
+
+let select = document.getElementById("userSelect");
+select.innerHTML = "";
+
+data.forEach(u => {
+
+let opt = document.createElement("option");
+opt.value = u.username;
+opt.textContent = u.username;
+
+select.appendChild(opt);
+
+});
+
+}catch(err){
+
+console.log(err);
+alert("Failed to load users");
+
+}
+
+}
+
+/* ---------------- LOAD MESSAGES ---------------- */
+
+async function loadMessages(){
+
+let username = document.getElementById("userSelect").value;
+
+if(!username){
+document.getElementById("messages").innerHTML = "Select a user";
+return;
+}
+
+try{
+
+let res = await fetch(API + "/messages/" + username);
+let data = await res.json();
+
+let box = document.getElementById("messages");
+box.innerHTML = "";
+
+if(!data || data.length === 0){
+box.innerHTML = "No messages found";
+return;
+}
+
+data.forEach(m => {
+
+let time = "No date";
+
+if(m.createdAt){
+let d = new Date(m.createdAt);
+time = d.toLocaleString();
+}
+
+let imageHTML = "";
+
+/* FILE IMAGE */
+if(m.image){
+imageHTML = `<img src="${API}/uploads/${m.image}">`;
+}
+
+/* IMAGE URL */
+else if(m.imageUrl){
+imageHTML = `<img src="${m.imageUrl}">`;
+}
+
+box.innerHTML += `
+<div class="card">
+
+<b>${m.username}</b>
+
+<p>${m.message}</p>
+
+${m.confidential ? '<span class="badge">🔒 Confidential</span>' : ''}
+
+${imageHTML}
+
+<br><br>
+
+<small>🕒 ${time}</small>
+
+</div>
+`;
+
+});
+
+}catch(err){
+
+console.log(err);
+alert("Failed to load messages");
+
+}
+
+}
+
+/* INIT */
+
+loadUsers();
+
+</script>
+
+</body>
+</html>
